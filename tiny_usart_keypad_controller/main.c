@@ -17,11 +17,17 @@
 //button stuff
 #define debounce 3
 
+volatile uint8_t last_state_a;
 volatile uint8_t last_state_b;
 volatile uint8_t last_state_d;
 
 volatile uint16_t button_state;
 void button_click(uint8_t index,uint8_t state);
+
+uint8_t irq_cnt = 0;
+
+//assuming 1/20 second interval this will be ~5 min
+#define SHUTDOWN_IRQ_CNT = 6000;
 
 //uart
 #define BAUD 9400
@@ -32,9 +38,14 @@ void button_click(uint8_t index,uint8_t state);
  }
  ISR(PCINT2_vect) {
  }
+
+ //strobe pins checking for changed state
  ISR(TIMER1_COMPA_vect){
-	uint8_t b_temp,d_temp;
+	uint8_t a_temp, b_temp,d_temp;
 	
+	a_temp = last_state_a^PINA;
+	last_state_a = PINA;
+
 	b_temp = last_state_b^PINB;
 	last_state_b = PINB;
 	
@@ -63,6 +74,12 @@ void button_click(uint8_t index,uint8_t state);
 	if ((d_temp & _BV(6)))
 		signalChangedState(9,debounce);
 
+	if ((a_temp & _BV(0)))
+		signalChangedState(10,debounce);
+	if ((a_temp & _BV(1)))
+		signalChangedState(11,debounce);
+	
+	irq_cnt++;
  }
 
 int main(void){
@@ -73,6 +90,9 @@ int main(void){
 	PORTA = 0xff;
 	DDRD = 0x00;
 	PORTD = 0xff;
+
+	//the ble irq pin d0 to be an output
+	 DDRD |= 1<<PORTD0;
 	
 	//this uses tccr0
 	initializeDebouncerTimer();
@@ -87,6 +107,9 @@ int main(void){
 	registerDebouncer(&PIND,PIND4,7,1,&button_click);
 	registerDebouncer(&PIND,PIND5,8,1,&button_click);
 	registerDebouncer(&PIND,PIND6,9,1,&button_click);
+	
+	registerDebouncer(&PINA,PIND0,10,1,&button_click);
+	registerDebouncer(&PINA,PIND1,11,1,&button_click);
 
 	//enable pin change interrupts in the general mask register
 	GIMSK|= (1 << PCIE0) | (1 << PCIE2);
@@ -96,18 +119,20 @@ int main(void){
 	PCMSK2 |= (1 << PCINT2) | (1 << PCINT3) | (1 << PCINT4)| (1 << PCINT5)| (1 << PCINT6);
 
 	//setup the initial state to track button presses
+	last_state_a = PINA;
 	last_state_b = PINB;
 	last_state_d = PIND;
 	button_state = 0;
 
-	// set up timer with prescaler = 64 and CTC mode
+	// set up timer with prescaler = 1 and CTC mode
 	TCCR1B |= (1 << WGM12)|(1 << CS10);
 	
 	// initialize counter
 	TCNT1 = 0;
 	
-	// initialize compare value
-	OCR1A = 2500;//5020;
+	// initialize compare value 1/20s
+	// http://www.avrfreaks.net/forum/tut-c-newbies-guide-avr-timers?page=all
+	OCR1A = 49999;
 	
 	// enable compare interrupt
 	TIMSK |= (1 << OCIE1A);
@@ -125,21 +150,26 @@ int main(void){
 	sei();
     
     while (1){
-		//todo: if some timeout has been hit then we should shutdown rather than idle here
-		//let the pci interrupt wake us back up
-		set_sleep_mode(SLEEP_MODE_IDLE);
-		sleep_mode();
+		//http://www.nongnu.org/avr-libc/user-manual/group__avr__sleep.html		
+		cli();
+		if(irq_cnt >= 6000){
+			irq_cnt = 0;
+			set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+		}else{
+			set_sleep_mode(SLEEP_MODE_IDLE);
+		}	
+		sleep_enable();		
+		sei();
+		sleep_cpu();
+		sleep_disable();
     }
 }
 
-void button_click(uint8_t index,uint8_t state){	
+void button_click(uint8_t index,uint8_t state){		
 	button_state ^= _BV(index);	
 
-	//add((button_state) & 0XFF);
 	uart_putc((button_state >> 8) & 0XFF);
 	uart_putc((button_state ) & 0XFF);
-		
-	// enable uart data interrupt (send data)
-	UCSRB |= (1<<UDRIE);	
+	
 }
 

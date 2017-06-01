@@ -8,7 +8,7 @@
 #define DBNC_TIMR0_BASEVAL	 	178
 
 //Defines the size of the debouncer handler arrays (i.e. 4 for a maximum of four)
-#define DBNC_NUM_DEBOUNCERS		10
+#define DBNC_NUM_DEBOUNCERS		12
 
 //Defines the number of timer ticks before a value is considered legitimate
 //This will define a maximum debounce time of approx 100 milliseconds @ 5

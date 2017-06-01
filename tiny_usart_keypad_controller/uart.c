@@ -47,7 +47,8 @@ void init_uart(void) {
   UBRRH = (uint8_t)(MYUBBR >> 8); 
   UBRRL = (uint8_t)(MYUBBR);
   // enable receive and transmit
-  UCSRB = (1 << RXEN) | (1 << TXEN) | (1 << RXCIE);
+  //UCSRB = (1 << RXEN) | (1 << TXEN) | (1 << RXCIE);
+  UCSRB = (1 << TXEN);
   // set frame format
   UCSRC = (1 << USBS) | (3 << UCSZ0);	// asynchron 8n1
 }
@@ -185,12 +186,14 @@ void uart_puts_P(const char *s) {
 ISR(USART_UDRE_vect) {
   uint8_t tmp_tail = 0;
   if (tx_head != tx_tail) {
+	PORTD |= 1<<PORTD0;
     tmp_tail = (tx_tail + 1) % BUFFER_SIZE;
-    UDR = tx_buffer[tx_tail];
+	UDR = tx_buffer[tx_tail];
     tx_tail = tmp_tail;
   }
   else {
     // disable this interrupt if nothing more to send
+	PORTD &= ~(1<<PORTD0);
     UCSRB &= ~(1 << UDRIE);
   }
 }
