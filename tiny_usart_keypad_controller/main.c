@@ -24,16 +24,20 @@ volatile uint8_t last_state_d;
 volatile uint16_t button_state;
 void button_click(uint8_t index,uint8_t state);
 
-uint8_t irq_cnt = 0;
+uint16_t shutdown_cnt = 0;
 
 //assuming 1/20 second interval this will be ~5 min
-#define SHUTDOWN_IRQ_CNT = 6000;
+uint16_t SHUTDOWN_TIMEOUT=12000;
+
+//assuming 1/20 second interval this will be ~1 sec
+uint8_t IRQ_TIMEOUT = 40;
+uint8_t irq_cnt = 0;
 
 //uart
 #define BAUD 9400
 #define MYUBBR ((F_CPU / (BAUD * 16L)) - 1)
 
-//TODO - when in powerdown these will wake me back up
+//when in powerdown these will wake me back up
  ISR(PCINT0_vect){
  }
  ISR(PCINT2_vect) {
@@ -79,7 +83,10 @@ uint8_t irq_cnt = 0;
 	if ((a_temp & _BV(1)))
 		signalChangedState(11,debounce);
 	
-	irq_cnt++;
+	shutdown_cnt++;
+	if(irq_cnt >0 && irq_cnt < IRQ_TIMEOUT+1){
+		irq_cnt++;
+	}
  }
 
 int main(void){
@@ -111,10 +118,13 @@ int main(void){
 	registerDebouncer(&PINA,PIND0,10,1,&button_click);
 	registerDebouncer(&PINA,PIND1,11,1,&button_click);
 
+
+	//TODO: make sure all pins used for input are represented below in the pin change interrupt registration
+
 	//enable pin change interrupts in the general mask register
 	GIMSK|= (1 << PCIE0) | (1 << PCIE2);
 
-	//enable pci for relevant port b (pcmsk) and port d (pcmsk2) pins
+	//enable pci for relevant port b (pcmsk) and port d (pcmsk2) pins	
 	PCMSK |= (1 << PCINT0) | (1 << PCINT1) | (1 << PCINT2)| (1 << PCINT3)| (1 << PCINT4);
 	PCMSK2 |= (1 << PCINT2) | (1 << PCINT3) | (1 << PCINT4)| (1 << PCINT5)| (1 << PCINT6);
 
@@ -130,12 +140,12 @@ int main(void){
 	// initialize counter
 	TCNT1 = 0;
 	
-	// initialize compare value 1/20s
+	// initialize compare value 1/40s
 	// http://www.avrfreaks.net/forum/tut-c-newbies-guide-avr-timers?page=all
-	OCR1A = 49999;
+	OCR1A = 24999;
 	
 	// enable compare interrupt
-	TIMSK |= (1 << OCIE1A);
+	//TIMSK |= (1 << OCIE1A);
 
 	//enable uart	
 	init_uart();
@@ -152,10 +162,22 @@ int main(void){
     while (1){
 		//http://www.nongnu.org/avr-libc/user-manual/group__avr__sleep.html		
 		cli();
-		if(irq_cnt >= 6000){
-			irq_cnt = 0;
+		if(irq_cnt == 0){
+			irq_cnt++;
+			PORTD &= ~(1<<PORTD0);
+		}
+		else if(irq_cnt >= IRQ_TIMEOUT){
+			PORTD |= 1<<PORTD0;
+		}
+		if(shutdown_cnt >= SHUTDOWN_TIMEOUT){
+			shutdown_cnt = 0;			
+		
+			// disable compare interrupt
+			TIMSK &= ~(1 << OCIE1A);
 			set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 		}else{
+			// enable compare interrupt
+			TIMSK |= (1 << OCIE1A);
 			set_sleep_mode(SLEEP_MODE_IDLE);
 		}	
 		sleep_enable();		
@@ -165,7 +187,13 @@ int main(void){
     }
 }
 
-void button_click(uint8_t index,uint8_t state){		
+void button_click(uint8_t index,uint8_t state){	
+	
+	if(irq_cnt > IRQ_TIMEOUT){
+		irq_cnt = 0;
+	}
+
+	
 	button_state ^= _BV(index);	
 
 	uart_putc((button_state >> 8) & 0XFF);
