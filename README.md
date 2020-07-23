@@ -14,6 +14,7 @@ When building a project it can sometimes be annoying to receive user input from 
 - Very low idle current consumption <img src="https://raw.githubusercontent.com/dretay/tiny_uart_keypad_controller/master/pics/idle.png" align="right" width="208">
   - Entire solution is interrupt driven, so uController only wakes when a key has been pressed 
   - Built-in timer-based button debouncing, so no need for supporting passives to filter inputs
+  - 0.4uA idle current consumption would theoretically allow it to operate for 160 years on a single CR2354 coin cell battery
 - uControlled has been clocked down to 1Mhz, so current consumption when running is only 0.5mA.  <img src="https://raw.githubusercontent.com/dretay/tiny_uart_keypad_controller/master/pics/button_press.png" align="right" width="208">
   - As shown to the right power saving is so aggressive even the "idle" time between pressing and releasing a button is accounted for. 
   - Uses ATYINY's internal RC oscillator, so no need to install a separate crystal for proper functionality. 
