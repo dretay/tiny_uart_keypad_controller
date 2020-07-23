@@ -8,7 +8,7 @@
 > An ATMEL ATTINY 4313-based very low power keypad -> USART bridge. 
 
 When building a project it can sometimes be annoying to receive user input from button presses. Typically you have to deal with things like debouncing your button to prevent spurious input, finding enough free GPIO pins to support the number of buttons you want, and setting up an efficient way to poll the buttons for state change (either through interrupts or a polling loop). These problems can become even worse when dealing with a RTOS-based project, as you need to ensure that your button implementation does not interfere with threads on the system (for example, by temporarily disabling interrupts). This project helps solve these problems by providing a complete solution for up to 12 buttons on a self-contained very low-power uController. You are able to simply connect your buttons to the uController, and then connect the chip to your project on a free UART port. You'll then receive a nice clean stream of button presses  without much setup headache!
-. 
+
 
 ### Main Features ###
 - Very low idle current consumption <img src="https://raw.githubusercontent.com/dretay/tiny_uart_keypad_controller/master/pics/idle.png" align="right" width="208">
@@ -25,7 +25,7 @@ When building a project it can sometimes be annoying to receive user input from 
  - Only real value to be edited is the number of ticks used when [debouncing]([https://github.com/dretay/tiny_uart_keypad_controller/blob/master/tiny_usart_keypad_controller/main.c#L22] (https://github.com/dretay/tiny_uart_keypad_controller/blob/master/tiny_usart_keypad_controller/main.c#L22)) an input.
 #### Breadboard
  - Setting up the circuit is very straightforward. PD1 is UART TX (9600 8n1). Almost all other pins are available as inputs, and use the 4313's internal pullups to reduce supporting components. The pins map to the output message as follows 
-  - <img src="https://raw.githubusercontent.com/dretay/tiny_uart_keypad_controller/master/pics/attiny2313a_4313a.png"  height="308">
+ <img src="https://raw.githubusercontent.com/dretay/tiny_uart_keypad_controller/master/pics/attiny2313a_4313a.png"  height="308">
 
  | Pin| Message Index | Pin |Message Index
  | -- | -- | -- | -- |
