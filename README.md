@@ -26,10 +26,10 @@ When building a project it can sometimes be annoying to receive user input from 
 > Software tools, hardware, and useful articles
 
 ### Software ###
-- [Atmel Studio]([https://www.microchip.com/mplab/avr-support/atmel-studio-7](https://www.microchip.com/mplab/avr-support/atmel-studio-7))
+- [Atmel Studio](https://www.microchip.com/mplab/avr-support/atmel-studio-7)
 - [AVR Sleep](http://www.nongnu.org/avr-libc/user-manual/group__avr__sleep.html)
 - [Hackaday Button Debouncing](https://hackaday.com/2010/11/09/debounce-code-one-post-to-rule-them-all/) 
 
 ### Hardware ###
-- [ATMEL ATTINY 4313]([https://www.microchip.com/wwwproducts/en/ATtiny4313](https://www.microchip.com/wwwproducts/en/ATtiny4313))
-- [ATMEL ICE]([https://www.microchip.com/DevelopmentTools/ProductDetails/ATATMEL-ICE](https://www.microchip.com/DevelopmentTools/ProductDetails/ATATMEL-ICE))
+- [ATMEL ATTINY 4313](https://www.microchip.com/wwwproducts/en/ATtiny4313)
+- [ATMEL ICE](https://www.microchip.com/DevelopmentTools/ProductDetails/ATATMEL-ICE)
