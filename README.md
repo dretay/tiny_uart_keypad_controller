@@ -1,5 +1,6 @@
 
 
+
 # ATTiny 4313 USART Keypad
 
 
@@ -21,6 +22,19 @@ When building a project it can sometimes be annoying to receive user input from 
 #### Atmel Studio 7.0
  -  You should just be able to check the project out and open it without issue. 
  - Only real value to be edited is the number of ticks used when [debouncing]([https://github.com/dretay/tiny_uart_keypad_controller/blob/master/tiny_usart_keypad_controller/main.c#L22] (https://github.com/dretay/tiny_uart_keypad_controller/blob/master/tiny_usart_keypad_controller/main.c#L22)) an input.
+#### Breadboard
+ - Setting up the circuit is very straightforward. PD1 is UART TX (9600 8n1). Almost all other pins are available as inputs, and use the 4313's internal pullups to reduce supporting components. The pins map to the output message as follows 
+  - <img src="https://raw.githubusercontent.com/dretay/tiny_uart_keypad_controller/master/pics/attiny2313a_4313a.png"  height="308">
+
+ | Pin| Message Index | Pin |Message Index
+ | -- | -- | -- | -- |
+ | B0| 0|D3 | 6|
+ | B1| 1|D4 | 7|
+ | B2 | 2|D5 | 8|
+ | B3 | 3|D6 | 9|
+ | B4 | 4|A0 | 10 |
+ | D2 | 5|A1 | 11 |
+ <img src="https://raw.githubusercontent.com/dretay/tiny_uart_keypad_controller/master/pics/IMG_5061.jpg" align="right">
  
 ## References
 > Software tools, hardware, and useful articles
