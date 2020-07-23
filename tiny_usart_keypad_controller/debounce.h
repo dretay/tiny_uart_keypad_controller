@@ -1,6 +1,6 @@
 #ifndef __DEBOUNCE_H__
 #define __DEBOUNCE_H__
-
+//based on https://hackaday.com/2010/11/09/debounce-code-one-post-to-rule-them-all/
 #include <avr/interrupt.h>
 
 //Optimized for 20 millisecond period on a 1Mhz clock

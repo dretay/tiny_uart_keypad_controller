@@ -1,93 +1,95 @@
-/*
- * TODO: disable undneeded stuff in the PRR (USI, possibly combine usart & debounce timers and disable timer1?)
- */ 
-
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <string.h>
 #include <avr/sfr_defs.h>
+#include <avr/wdt.h>
 #include <util/delay.h>
 #include <avr/sleep.h>
-
+#include <avr/power.h>
+#include <stdbool.h>
 
 #include "debounce.h"
-//#include "ring_buffer.h"
 #include "uart.h"
+#include "atmega-timers.h"
+#include "types.h"
 
-//button stuff
-#define debounce 3
+//function prototypes
+void button_handler(uint8_t index,uint8_t state);
+bool is_idle(void);
+void power_down(void);
 
-volatile uint8_t last_state_a;
-volatile uint8_t last_state_b;
-volatile uint8_t last_state_d;
+// timer ticks before a debounced value is considered legitimate
+#define DEBOUNCE_TICKS 3
 
-volatile uint16_t button_state;
-void button_click(uint8_t index,uint8_t state);
 
-uint16_t shutdown_cnt = 0;
-
-//assuming 1/20 second interval this will be ~5 min
-uint16_t SHUTDOWN_TIMEOUT=12000;
-
-//assuming 1/20 second interval this will be ~1 sec
-uint8_t IRQ_TIMEOUT = 40;
-uint8_t irq_cnt = 0;
-
-//uart
-#define BAUD 9400
-#define MYUBBR ((F_CPU / (BAUD * 16L)) - 1)
-
-//when in powerdown these will wake me back up
- ISR(PCINT0_vect){
- }
- ISR(PCINT2_vect) {
- }
-
- //strobe pins checking for changed state
- ISR(TIMER1_COMPA_vect){
-	uint8_t a_temp, b_temp,d_temp;
-	
-	a_temp = last_state_a^PINA;
-	last_state_a = PINA;
-
-	b_temp = last_state_b^PINB;
-	last_state_b = PINB;
-	
-	d_temp = last_state_d^PIND;
-	last_state_d = PIND;
-
-	if ((b_temp & _BV(0)))
-		signalChangedState(0,debounce);
-	if ((b_temp & _BV(1)))
-		signalChangedState(1,debounce);
-	if ((b_temp & _BV(2)))
-		signalChangedState(2,debounce);
-	if ((b_temp & _BV(3)))
-		signalChangedState(3,debounce);	
-	if ((b_temp & _BV(4)))
-		signalChangedState(4,debounce);
-		
-	if ((d_temp & _BV(2)))
-		signalChangedState(5,debounce);
-	if ((d_temp & _BV(3)))
-		signalChangedState(6,debounce);
-	if ((d_temp & _BV(4)))
-		signalChangedState(7,debounce);
-	if ((d_temp & _BV(5)))
-		signalChangedState(8,debounce);
-	if ((d_temp & _BV(6)))
-		signalChangedState(9,debounce);
-
-	if ((a_temp & _BV(0)))
-		signalChangedState(10,debounce);
-	if ((a_temp & _BV(1)))
-		signalChangedState(11,debounce);
-	
-	shutdown_cnt++;
-	if(irq_cnt >0 && irq_cnt < IRQ_TIMEOUT+1){
-		irq_cnt++;
+// PCI0 will trigger if any enabled PCINT7..0 pin toggles. (everything on port B)
+volatile u8 pcint0_last_state;
+ISR(PCINT0_vect){
+	u8 temp = pcint0_last_state^PINB;
+	pcint0_last_state = PINB;
+	if ((temp & _BV(0))){
+		signalChangedState(0,DEBOUNCE_TICKS); //B0
 	}
- }
+	if ((temp & _BV(1))){
+		signalChangedState(1,DEBOUNCE_TICKS); //B1
+	}
+	if ((temp & _BV(2))){
+		signalChangedState(2,DEBOUNCE_TICKS); //B2
+	}
+	if ((temp & _BV(3))){
+		signalChangedState(3,DEBOUNCE_TICKS); //B3
+	}
+	if ((temp & _BV(4))){
+		signalChangedState(4,DEBOUNCE_TICKS); //B4
+	}
+}
+//PCI2 will trigger, if any enabled PCINT17..11 pin toggles (everything on port D)
+volatile u8 pcint2_last_state;
+ISR(PCINT2_vect) {
+	u8 temp = pcint2_last_state^PIND;
+	pcint2_last_state = PIND;
+	if ((temp & _BV(2))){
+		signalChangedState(5,DEBOUNCE_TICKS);//D2
+	}
+	if ((temp & _BV(3))){
+		signalChangedState(6,DEBOUNCE_TICKS);//D3
+	}
+	if ((temp & _BV(4))){
+		signalChangedState(7,DEBOUNCE_TICKS);//D4
+	}
+	if ((temp & _BV(5))){
+		signalChangedState(8,DEBOUNCE_TICKS);//D5
+	}
+	if ((temp & _BV(6))){
+		signalChangedState(9,DEBOUNCE_TICKS);//D6
+	}
+}
+//PCI1 will trigger if any enabled PCINT10..8 pin toggles. (everything on port A)
+volatile u8 pcint1_last_state;
+ISR(PCINT1_vect) {
+	u8 temp = pcint2_last_state^PINA;
+	pcint1_last_state = PIND;
+	if ((temp & _BV(0))){
+		signalChangedState(10,DEBOUNCE_TICKS);//A0
+	}
+	if ((temp & _BV(1))){
+		signalChangedState(11,DEBOUNCE_TICKS);//A1
+	}
+}
+bool is_idle(void){
+	return (TCCR0B == 0 && ( UCSRA & (1<<UDRE)) );
+}
+void power_down(void){
+	//http://www.nongnu.org/avr-libc/user-manual/group__avr__sleep.html
+	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+	//go to sleep
+	sleep_enable();
+	sei();
+	sleep_cpu();
+	
+	//wake up
+	sleep_disable();
+}
 
 int main(void){
 	//configure all pins as pull-up inputs
@@ -99,105 +101,72 @@ int main(void){
 	PORTD = 0xff;
 
 	//the ble irq pin d0 to be an output
-	 DDRD |= 1<<PORTD0;
+	DDRD |= 1<<PORTD0;
 	
-	//this uses tccr0
+	//this uses tccr0 (timer0)
 	initializeDebouncerTimer();
 	
-	registerDebouncer(&PINB,PORTB0,0,1,&button_click);
-	registerDebouncer(&PINB,PORTB1,1,1,&button_click);
-	registerDebouncer(&PINB,PORTB2,2,1,&button_click);
-	registerDebouncer(&PINB,PORTB3,3,1,&button_click);
-	registerDebouncer(&PINB,PORTB4,4,1,&button_click);	
-	registerDebouncer(&PIND,PIND2,5,1,&button_click);
-	registerDebouncer(&PIND,PIND3,6,1,&button_click);
-	registerDebouncer(&PIND,PIND4,7,1,&button_click);
-	registerDebouncer(&PIND,PIND5,8,1,&button_click);
-	registerDebouncer(&PIND,PIND6,9,1,&button_click);
+	//register all pins that will be used as buttons
+	u8 async_events = true;
+	registerDebouncer(&PINB,PORTB0,0,async_events,&button_handler);
+	registerDebouncer(&PINB,PORTB1,1,async_events,&button_handler);
+	registerDebouncer(&PINB,PORTB2,2,async_events,&button_handler);
+	registerDebouncer(&PINB,PORTB3,3,async_events,&button_handler);
+	registerDebouncer(&PINB,PORTB4,4,async_events,&button_handler);
 	
-	registerDebouncer(&PINA,PIND0,10,1,&button_click);
-	registerDebouncer(&PINA,PIND1,11,1,&button_click);
-
-
-	//TODO: make sure all pins used for input are represented below in the pin change interrupt registration
+	registerDebouncer(&PIND,PIND2,5,async_events,&button_handler);
+	registerDebouncer(&PIND,PIND3,6,async_events,&button_handler);
+	registerDebouncer(&PIND,PIND4,7,async_events,&button_handler);
+	registerDebouncer(&PIND,PIND5,8,async_events,&button_handler);
+	registerDebouncer(&PIND,PIND6,9,async_events,&button_handler);
+	
+	registerDebouncer(&PINA,PINA0,10,async_events,&button_handler);
+	registerDebouncer(&PINA,PINA1,11,async_events,&button_handler);
 
 	//enable pin change interrupts in the general mask register
-	GIMSK|= (1 << PCIE0) | (1 << PCIE2);
-
-	//enable pci for relevant port b (pcmsk) and port d (pcmsk2) pins	
+	GIMSK |= (1 << PCIE0) | (1 << PCIE2);
+	
+	//enable pci for relevant port b (pcmsk), port a(pcmsk1), and port d (pcmsk2) pins
 	PCMSK |= (1 << PCINT0) | (1 << PCINT1) | (1 << PCINT2)| (1 << PCINT3)| (1 << PCINT4);
-	PCMSK2 |= (1 << PCINT2) | (1 << PCINT3) | (1 << PCINT4)| (1 << PCINT5)| (1 << PCINT6);
+	PCMSK1 |= (1 << PCINT8) | (1 << PCINT9); //porta
+	PCMSK2 |= (1 << PCINT13) | (1 << PCINT14) | (1 << PCINT15)| (1 << PCINT16)| (1 << PCINT17);
 
-	//setup the initial state to track button presses
-	last_state_a = PINA;
-	last_state_b = PINB;
-	last_state_d = PIND;
-	button_state = 0;
-
-	// set up timer with prescaler = 1 and CTC mode
-	TCCR1B |= (1 << WGM12)|(1 << CS10);
-	
-	// initialize counter
-	TCNT1 = 0;
-	
-	// initialize compare value 1/40s
-	// http://www.avrfreaks.net/forum/tut-c-newbies-guide-avr-timers?page=all
-	OCR1A = 24999;
-	
-	// enable compare interrupt
-	//TIMSK |= (1 << OCIE1A);
-
-	//enable uart	
+	//enable uart
 	init_uart();
 	
 	//disable analog comparator
 	ACSR |= (1<<ACD);
 	
+	//disable timer1
+	PRR |= (1<<PRTIM1);
+	
 	//disable the usi
 	PRR |= (1<<PRUSI);
 	
+	//disable watchdog timer
+	wdt_disable();
+		
 	//enable interrupts
 	sei();
-    
-    while (1){
-		//http://www.nongnu.org/avr-libc/user-manual/group__avr__sleep.html		
-		cli();
-		if(irq_cnt == 0){
-			irq_cnt++;
-			PORTD &= ~(1<<PORTD0);
+	
+	while (1){
+		if(is_idle()){
+			power_down();
 		}
-		else if(irq_cnt >= IRQ_TIMEOUT){
-			PORTD |= 1<<PORTD0;
-		}
-		if(shutdown_cnt >= SHUTDOWN_TIMEOUT){
-			shutdown_cnt = 0;			
-		
-			// disable compare interrupt
-			TIMSK &= ~(1 << OCIE1A);
-			set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-		}else{
-			// enable compare interrupt
-			TIMSK |= (1 << OCIE1A);
-			set_sleep_mode(SLEEP_MODE_IDLE);
-		}	
-		sleep_enable();		
-		sei();
-		sleep_cpu();
-		sleep_disable();
-    }
+	}
 }
 
-void button_click(uint8_t index,uint8_t state){	
-	
-	if(irq_cnt > IRQ_TIMEOUT){
-		irq_cnt = 0;
+//callback once button click has been debounced
+void button_handler(uint8_t index,uint8_t state){
+	static uint16_t button_state;
+	if(state == 1){
+		button_state &= ~(1<<index);
+	}
+	else{
+		button_state |= 1<<index;
 	}
 
-	
-	button_state ^= _BV(index);	
-
-	uart_putc((button_state >> 8) & 0XFF);
-	uart_putc((button_state ) & 0XFF);
-	
+	send_uart((button_state >> 8) & 0XFF);
+	send_uart((button_state ) & 0XFF);
 }
 

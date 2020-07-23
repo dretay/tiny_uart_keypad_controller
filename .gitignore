@@ -1,2 +1,6 @@
 tiny_usart_keypad_controller/Release/
 tiny_usart_keypad_controller/Debug/
+
+tiny_usart_keypad_controller/Document.eep
+
+.vs/

@@ -18,7 +18,8 @@
 #endif
 
 //#define BAUD 19200
-#define BAUD 4800
+//#define BAUD 4800
+#define BAUD 9600
 // 4.096MHz
 //  4800: 52.3333333
 //  9600: 25.6666667
@@ -186,14 +187,12 @@ void uart_puts_P(const char *s) {
 ISR(USART_UDRE_vect) {
   uint8_t tmp_tail = 0;
   if (tx_head != tx_tail) {
-	PORTD |= 1<<PORTD0;
     tmp_tail = (tx_tail + 1) % BUFFER_SIZE;
 	UDR = tx_buffer[tx_tail];
     tx_tail = tmp_tail;
   }
   else {
     // disable this interrupt if nothing more to send
-	PORTD &= ~(1<<PORTD0);
     UCSRB &= ~(1 << UDRIE);
   }
 }
