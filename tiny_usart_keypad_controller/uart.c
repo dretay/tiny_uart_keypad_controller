@@ -18,8 +18,8 @@
 #endif
 
 //#define BAUD 19200
-//#define BAUD 4800
-#define BAUD 9600
+#define BAUD 4800
+//#define BAUD 9600
 // 4.096MHz
 //  4800: 52.3333333
 //  9600: 25.6666667

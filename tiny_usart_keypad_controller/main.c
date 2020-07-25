@@ -12,6 +12,7 @@
 #include "uart.h"
 #include "atmega-timers.h"
 #include "types.h"
+#include "bithelper.h"
 
 //function prototypes
 void button_handler(uint8_t index,uint8_t state);
@@ -166,7 +167,7 @@ void button_handler(uint8_t index,uint8_t state){
 		button_state |= 1<<index;
 	}
 
-	send_uart((button_state >> 8) & 0XFF);
-	send_uart((button_state ) & 0XFF);
+	send_uart(highByte(button_state));
+	send_uart(lowByte(button_state));
 }
 
