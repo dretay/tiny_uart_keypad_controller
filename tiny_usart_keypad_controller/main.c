@@ -68,8 +68,8 @@ ISR(PCINT2_vect) {
 //PCI1 will trigger if any enabled PCINT10..8 pin toggles. (everything on port A)
 volatile u8 pcint1_last_state;
 ISR(PCINT1_vect) {
-	u8 temp = pcint2_last_state^PINA;
-	pcint1_last_state = PIND;
+	u8 temp = pcint1_last_state^PINA;
+	pcint1_last_state = PINA;
 	if ((temp & _BV(0))){
 		signalChangedState(10,DEBOUNCE_TICKS);//A0
 	}
@@ -125,7 +125,7 @@ int main(void){
 	registerDebouncer(&PINA,PINA1,11,async_events,&button_handler);
 
 	//enable pin change interrupts in the general mask register
-	GIMSK |= (1 << PCIE0) | (1 << PCIE2);
+	GIMSK |= (1 << PCIE0) | (1 << PCIE1) | (1 << PCIE2);
 	
 	//enable pci for relevant port b (pcmsk), port a(pcmsk1), and port d (pcmsk2) pins
 	PCMSK |= (1 << PCINT0) | (1 << PCINT1) | (1 << PCINT2)| (1 << PCINT3)| (1 << PCINT4);
