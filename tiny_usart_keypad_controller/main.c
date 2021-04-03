@@ -100,6 +100,11 @@ int main(void){
 	PORTA = 0xff;
 	DDRD = 0x00;
 	PORTD = 0xff;
+    
+    //initialize state of GPIO registers
+    pcint0_last_state=PINB;
+    pcint1_last_state=PINA;
+    pcint2_last_state=PIND;
 
 	//the ble irq pin d0 to be an output
 	DDRD |= 1<<PORTD0;
