@@ -1,18 +1,5 @@
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <string.h>
-#include <avr/sfr_defs.h>
-#include <avr/wdt.h>
-#include <util/delay.h>
-#include <avr/sleep.h>
-#include <avr/power.h>
-#include <stdbool.h>
-
-#include "debounce.h"
 #include "uart.h"
-#include "atmega-timers.h"
 #include "types.h"
-#include "bithelper.h"
 #include "IRQKeypad.h"
 #include "LowPower.h"
 
