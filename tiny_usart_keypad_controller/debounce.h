@@ -1,7 +1,9 @@
-#ifndef __DEBOUNCE_H__
-#define __DEBOUNCE_H__
+#pragma once
 //based on https://hackaday.com/2010/11/09/debounce-code-one-post-to-rule-them-all/
 #include <avr/interrupt.h>
+#include <avr/io.h>
+#include <util/delay.h>
+#include "types.h"
 
 //Optimized for 20 millisecond period on a 1Mhz clock
 #define DBNC_TIMR0_PRESCALER 	_BV(CS02)
@@ -24,14 +26,14 @@ typedef void(*debounceHandler)(uint8_t,uint8_t);
 typedef struct
 {
 	//A pointer to a volatile port (I/O or otherwise)
-	volatile uint8_t *port;
+	volatile u8 *port;
 
 	//A pointer to a debounceHandler function
 	debounceHandler handler;
 
 	//This is the decremental counter which determines
 	//if the button has been debounced
-	uint8_t counter;
+	u8 counter;
 
 	/*
 
@@ -42,7 +44,7 @@ typedef struct
 		Bit    7: Asynchronous
 
 	*/
-	uint8_t bitmap;
+	u8 bitmap;
 } DBNC_ITEM;
 
 typedef struct
@@ -52,7 +54,7 @@ typedef struct
 	DBNC_ITEM dbUnits[DBNC_NUM_DEBOUNCERS];
 
 	//This is set to 1 when any signal in the dbncSignaled array has been set
-	uint8_t signalReady;
+	u8 signalReady;
 
 } DBNC_GLOBAL;
 
@@ -67,8 +69,8 @@ volatile DBNC_GLOBAL db;
 //ISR for timer0 overflow interrupt
 ISR(TIMER0_OVF_vect);
 void callSignaledHandlers(void);
-void registerDebouncer(volatile uint8_t *port,uint8_t bit,uint8_t index,uint8_t Asynchronous,debounceHandler handler);
-void signalChangedState(uint8_t index,uint8_t counterTop);
+void registerDebouncer(volatile u8 *port,u8 bit,u8 index,u8 Asynchronous,debounceHandler handler);
+void signalChangedState(u8 index);
 void initializeDebouncerTimer();
 
-#endif
+

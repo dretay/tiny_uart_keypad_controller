@@ -3,6 +3,7 @@
 
 #define __IO volatile
 #define __I volatile const
+#define NULL ((void *)0)
 
 typedef int32_t s32;
 typedef int16_t s16;

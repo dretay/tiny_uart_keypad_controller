@@ -1,14 +1,11 @@
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <util/delay.h>
 #include "debounce.h"
 
 
 ISR(TIMER0_OVF_vect)
 {
-	uint8_t i;
-	uint8_t temp;
-	uint8_t workDone = 0;
+	u8 i;
+	u8 temp;
+	u8 workDone = 0;
 
 	//Cycle through all debounced items
 	for (i=0;i<DBNC_NUM_DEBOUNCERS;i++)
@@ -64,7 +61,7 @@ ISR(TIMER0_OVF_vect)
 //Call any signaled handlers (to be executed in main program loop)
 void callSignaledHandlers(void)
 {
-	int i;
+	u8 i;
 
 	if (!db.signalReady) return;
 	
@@ -86,7 +83,7 @@ void callSignaledHandlers(void)
 
 }
 
-void registerDebouncer(volatile uint8_t *port,uint8_t bit,uint8_t index,uint8_t Asynchronous,debounceHandler handler)
+void registerDebouncer(volatile u8 *port ,u8 bit,uint8_t index, u8 Asynchronous, debounceHandler handler)
 {
 	//Store port pointer
 	//Store handler pointer
@@ -101,13 +98,9 @@ void registerDebouncer(volatile uint8_t *port,uint8_t bit,uint8_t index,uint8_t 
 						 		  _BITSHIFTBY((((*port) & _BV(bit)) != 0),5)|
 						 		  bit;
 }
-void signalChangedState(uint8_t index,uint8_t counterTop)
+void signalChangedState(u8 index)
 {
-	if (!counterTop)
-	db.dbUnits[index].counter = DBNC_COUNTER_TOP;
-	else
-	db.dbUnits[index].counter = counterTop;
-
+	db.dbUnits[index].counter = DBNC_COUNTER_TOP;	
 	if (!TCCR0B)
 	TCCR0B = DBNC_TIMR0_PRESCALER;
 }
